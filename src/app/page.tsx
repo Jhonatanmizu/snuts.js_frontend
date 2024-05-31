@@ -1,113 +1,205 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+import { useToast } from "@/components/ui/use-toast";
+// Utils
+import { cn } from "@/lib/utils";
+// Components
+import { Input } from "@/components/ui/input";
+import Icon from "./common/components/Icon";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import Loading from "./common/assets/Loading";
+// Types
+import { IHttpError, ISmell } from "./common/types";
+// Stories
+import useSmellStore from "@/store/smell.store";
+// Service
+import axiosInstance from "./common/services/axios.service";
 
-export default function Home() {
+type TableHead = {
+  title: string;
+};
+
+const TABLE_HEADS: TableHead[] = [
+  {
+    title: "File",
+  },
+  {
+    title: "Type",
+  },
+  {
+    title: "StartLine",
+  },
+  {
+    title: "EndLine",
+  },
+  {
+    title: "It count",
+  },
+  {
+    title: "Describe count",
+  },
+];
+
+const Home = () => {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [repositoryUrl, setRepositoryUrl] = useState("");
+  const smells: ISmell[] = useSmellStore((state) => state.smells);
+  const handleLoad = useSmellStore((state) => state.add);
+
+  const handleAnalyzeToCSV = async (repositoryUrl: string) => {
+    setIsLoading(true);
+    try {
+      const data = {
+        repository: repositoryUrl,
+        hasTestSmell: true,
+      };
+      const response = await axiosInstance.post("/export-csv", data);
+      const blob = response.data;
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "output.csv");
+      document.body.appendChild(link);
+      link.click();
+      if (link.parentNode) link.parentNode?.removeChild(link);
+      toast({ title: "CSV loaded" });
+    } catch (error) {
+      const errorValue: IHttpError = error as IHttpError;
+      const errorMessage = errorValue?.response?.data?.message as string;
+      console.error("Error when we tried to handle analyze to csv", error);
+      toast({
+        variant: "destructive",
+        title: "Uh oh! Something went wrong.",
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAnalyze = async (repositoryUrl: string) => {
+    setIsLoading(true);
+    try {
+      const data = {
+        repository: repositoryUrl,
+        hasTestSmell: true,
+      };
+      const response = await axiosInstance.post("/", data);
+      if (response.data && response.data.length > 0) {
+        handleLoad(response.data);
+        toast({ title: "Result loaded" });
+      } else {
+        toast({ title: "No smells found" });
+      }
+    } catch (error) {
+      const errorValue: IHttpError = error as IHttpError;
+      const errorMessage = errorValue?.response?.data?.message as string;
+      console.error("Error when we tried to handle analyze");
+      toast({
+        variant: "destructive",
+        title: "Uh oh! Something went wrong.",
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main className="w-full flex flex-1 flex-grow min-full items-center flex-col">
+      <section className="flex flex-1 items-center justify-center h-full flex-col p-8 gap-8 w-full md:max-w-screen-lg ">
+        <div className="flex items-center justify-center gap-6 flex-col">
+          <h1 className="text-5xl font-bold">Explore</h1>
+          <p className="text-2xl text-center">
+            Refine Your Testing Strategy with Advanced Test Smell Analysis
+          </p>
         </div>
-      </div>
-
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
+        <div className="flex items-center justify-center w-full relative">
+          <Input
+            name="repository"
+            required
+            value={repositoryUrl}
+            onChange={(event) => {
+              setRepositoryUrl(event.target.value);
+            }}
+            onKeyDown={(event) => {
+              const isEnter = event.key == "Enter";
+              if (!isEnter) return;
+              handleAnalyze(repositoryUrl);
+            }}
+            placeholder="Insert here the public project repository url"
+            className={cn(
+              "rounded-3xl h-12 text-foreground border-1 bg-primary  border-zinc-500 shadow-xl"
+            )}
+          />
+          <Button
+            disabled={!repositoryUrl || isLoading}
+            className="absolute right-2  top-1 bottom-1 flex items-center justify-center rounded-full p-1"
+            onClick={() => handleAnalyze(repositoryUrl)}
+          >
+            <Icon icon="ion:search" width={32} height={32} />
+          </Button>
+        </div>
+        {isLoading ? (
+          <div className=" flex flex-1 items-center justify-center">
+            <Loading />
+          </div>
+        ) : (
+          <>
+            {smells.length > 0 && (
+              <Table className={cn("bg-primary rounded-xl")}>
+                <TableCaption>
+                  A list of your test Smells detected in the current repository.
+                </TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    {TABLE_HEADS.map((th) => (
+                      <TableHead key={th.title}>{th.title}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {smells.map((tr) => {
+                    return (
+                      <>
+                        {tr.smells.map((sm) => (
+                          <TableRow key={tr.file + Math.random() * 1000 + sm}>
+                            <TableCell>{tr.file}</TableCell>
+                            <TableCell>{tr.type}</TableCell>
+                            <TableCell>{sm.startLine}</TableCell>
+                            <TableCell>{sm.endLine}</TableCell>
+                            <TableCell>{tr.info.itCount}</TableCell>
+                            <TableCell>{tr.info.describeCount}</TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </>
+        )}
+        <Button
+          className="rounded-xl w-full bg-secondary"
+          disabled={!repositoryUrl || isLoading}
+          onClick={() => handleAnalyzeToCSV(repositoryUrl)}
         >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+          Get Csv
+        </Button>
+      </section>
     </main>
   );
-}
+};
+
+export default Home;
